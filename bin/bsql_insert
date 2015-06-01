@@ -1,5 +1,7 @@
 #!/bin/bash
 
+DIR=`dirname $0`
+
 set -e
 
 if [ "$#" -eq 0 ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
@@ -26,7 +28,7 @@ while [ "$#" -gt 0 ]; do
   COLUMNS="$COLUMNS $COLUMN"
   shift
 
-  bsql_column_index $TABLE $COLUMN
+  $DIR/bsql_column_index $TABLE $COLUMN
   if [ "$?" -ne 0 ]; then
     echo "Column $COLUMN does not exist in table $TABLE"
     exit 1

@@ -12,7 +12,8 @@ if [ "$#" -eq 0 ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
   echo "Flags:"
   echo "  @ indicates an auto-incrementing column"
   echo "  # indicates an indexed column"
-  echo "Default column is @#_id"
+  echo "  * indicates a unique column"
+  echo "Default column is *@#_id"
   exit 0
 fi
 
@@ -29,7 +30,7 @@ while [ "$#" -gt 0 ]; do
   COLUMN=$1
   INDEXED=0
   AUTOINCREMENTED=0
-  UNIQUED=1
+  UNIQUED=0
   shift
 
   while [[ "$COLUMN" =~ ^[@#*] ]]; do
@@ -47,15 +48,18 @@ while [ "$#" -gt 0 ]; do
     COLUMN=${COLUMN:1}
   done
 
-  if [[ ! "$COLUMN" =~ ^[-_a-zA-Z0-9]+$ ]] || [ "$COLUMN" == "_id" ]; then
+  if [[ ! "$COLUMN" =~ ^[-_a-zA-Z0-9]+$ ]]; then
     echo "Column name $COLUMN (defined with $ORIG_COLUMN) is not allowed"
     exit 1
   fi
-  if [ "$UNIQUED" -eq 1 ] && [ "INDEXED" -eq 0 ]; then
+  if [ "$UNIQUED" -eq 1 ] && [ "$INDEXED" -eq 0 ]; then
     echo "Refusing to unique an unindexed column: $ORIG_COLUMN"
     exit 1
   fi
-  # TODO: check for dupe column names
+  if grep -Eq "( |^)$COLUMN( |$)" <<<"$COLUMNS"; then
+    echo "Column names may not be duplicated: $COLUMN"
+    exit 1
+  fi
   COLUMNS="$COLUMNS $COLUMN"
   INDEXEDS="$INDEXEDS $INDEXED"
   AUTOINCREMENTEDS="$AUTOINCREMENTEDS $AUTOINCREMENTED"
