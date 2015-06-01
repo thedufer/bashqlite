@@ -1,0 +1,93 @@
+#!/bin/bash
+
+set -e
+
+# LOTS OF ARG PARSING/VALIDATING
+
+if [ "$#" -eq 0 ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+  echo "Usage: $0 tablename [column ...]"
+  echo "tablename must be a valid filename on your system, and may not contain a leading underscore (_)."
+  echo "column definitions consist of flags followed by a name"
+  echo "column names must match /[-_a-zA-z0-9]+/, and may not be _id"
+  echo "Flags:"
+  echo "  @ indicates an auto-incrementing column"
+  echo "  # indicates an indexed column"
+  echo "Default column is @#_id"
+  exit 0
+fi
+
+TABLE=$1
+shift
+
+COLUMNS="_id"
+INDEXEDS="1"
+AUTOINCREMENTEDS="1"
+UNIQUEDS="1"
+
+while [ "$#" -gt 0 ]; do
+  ORIG_COLUMN=$1
+  COLUMN=$1
+  INDEXED=0
+  AUTOINCREMENTED=0
+  UNIQUED=1
+  shift
+
+  while [[ "$COLUMN" =~ ^[@#*] ]]; do
+    case ${COLUMN:0:1} in
+      @)
+        AUTOINCREMENTED=1
+        ;;
+      \#)
+        INDEXED=1
+        ;;
+      *)
+        UNIQUED=1
+        ;;
+    esac
+    COLUMN=${COLUMN:1}
+  done
+
+  if [[ ! "$COLUMN" =~ ^[-_a-zA-Z0-9]+$ ]] || [ "$COLUMN" == "_id" ]; then
+    echo "Column name $COLUMN (defined with $ORIG_COLUMN) is not allowed"
+    exit 1
+  fi
+  if [ "$UNIQUED" -eq 1 ] && [ "INDEXED" -eq 0 ]; then
+    echo "Refusing to unique an unindexed column: $ORIG_COLUMN"
+    exit 1
+  fi
+  # TODO: check for dupe column names
+  COLUMNS="$COLUMNS $COLUMN"
+  INDEXEDS="$INDEXEDS $INDEXED"
+  AUTOINCREMENTEDS="$AUTOINCREMENTEDS $AUTOINCREMENTED"
+  UNIQUEDS="$UNIQUEDS $UNIQUED"
+done
+
+# NOW DO SOME REAL WORK
+
+mkdir "$BSQL_PATH/data/$TABLE"
+mkdir "$BSQL_PATH/indexes/$TABLE"
+mkdir "$BSQL_PATH/metadata/$TABLE"
+SCHEMA_PATH=$BSQL_PATH/schemas/$TABLE
+>$SCHEMA_PATH
+
+i=0
+for COLUMN in $COLUMNS; do
+  set -- $INDEXEDS; shift $i; INDEXED=$1
+  set -- $AUTOINCREMENTEDS; shift $i; AUTOINCREMENTED=$1
+
+  SCHEMA_LINE="$COLUMN"
+  if [ "$AUTOINCREMENTED" == "1" ]; then
+    SCHEMA_LINE="$SCHEMA_LINE @"
+    echo "0" >$BSQL_PATH/metadata/$TABLE/inc_$COLUMN
+  fi
+  if [ "$INDEXED" == "1" ]; then
+    SCHEMA_LINE="$SCHEMA_LINE #"
+    mkdir "$BSQL_PATH/indexes/$TABLE/$COLUMN"
+  fi
+  if [ "$UNIQUED" == "1" ]; then
+    SCHEMA_LINE="$SCHEMA_LINE *"
+  fi
+  echo "$SCHEMA_LINE" >>$SCHEMA_PATH
+
+  i=`expr $i + 1`
+done

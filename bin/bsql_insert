@@ -1,0 +1,34 @@
+#!/bin/bash
+
+set -e
+
+if [ "$#" -eq 0 ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+  echo "Usage: $0 tablename [column ...]"
+  echo "tablename must be an existing table in the database."
+  echo "Each column must be an existing column in the table."
+  echo "STDIN should contain lines of space-separated column entries, in the order of the column names."
+  echo "Input should be bsql encoded."
+  exit 0
+fi
+
+TABLE=$1
+shift
+
+if [ ! -e $BSQL_PATH/schemas/$TABLE ]; then
+  echo "tablename must be an existing table in the database - could not find $TABLE."
+  exit 1
+fi
+
+COLUMNS=""
+
+while [ "$#" -gt 0 ]; do
+  COLUMN=$1
+  COLUMNS="$COLUMNS $COLUMN"
+  shift
+
+  bsql_column_index $TABLE $COLUMN
+  if [ "$?" -ne 0 ]; then
+    echo "Column $COLUMN does not exist in table $TABLE"
+    exit 1
+  fi
+done

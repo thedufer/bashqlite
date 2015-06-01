@@ -1,0 +1,14 @@
+#!/bin/bash
+
+bsql_connect_help() {
+  echo "bsql_connect dbpath"
+  echo "You're probably gonna want to use a full path, but you do you."
+}
+
+bsql_connect() {
+  if [ "$#" -ne 1 ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+    bsql_connect_help
+    return
+  fi
+  export BSQL_PATH="$1"
+}

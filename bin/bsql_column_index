@@ -1,0 +1,29 @@
+#!/bin/bash
+
+set -e
+
+if [ "$#" -ne 2 ]; then
+  echo "Usage: $0 tablename column"
+  exit 0
+fi
+
+TABLE=$1
+shift
+
+SCHEMA_PATH=$BSQL_PATH/schemas/$TABLE
+
+if [ ! -e $SCHEMA_PATH ]; then
+  echo "tablename must be an existing table in the database - could not find $TABLE."
+  exit 1
+fi
+
+COLUMN=$1
+shift
+
+INDEX=`awk '$1=="'"$COLUMN"'"{print NR-1;exit;}' <$SCHEMA_PATH`
+
+if [ "$INDEX" == "" ]; then
+  exit 1;
+fi
+
+echo $INDEX

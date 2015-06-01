@@ -1,0 +1,90 @@
+directories:
+
+<dbname>
+  data
+    <tablename>
+      <_id value>
+        <columnname> - file containing column data, not escaped
+  indexes
+    <tablename>
+      <indexname>
+        <index value, md5ed>
+          <_id value> - symlink to data dir
+  schemas
+    <tablename> - schema file
+  metadata
+    <tablename>
+      <filename> - metadata file
+
+table names:
+- may not start with _
+- must be valid directory names on your filesystem
+  - slashes, nullbytes, etc are probably out
+
+schema file:
+- line per column
+- <name> [attributes...]
+- name must be characters in [-_a-zA-z0-9]
+- name may not be '_table' or '_id'
+  - those are automatically the first 2 columns
+- attributes
+  - autoincrementing
+    - implemented with metadata file containing number
+  - indexed
+
+data file:
+- single line
+- space-separated columns
+- every field is BSQL-encoded
+
+BSQL-encoding:
+- spaces encoded like '\s'
+- backslashes like '\x'
+- newlines like '\n'
+- everything else is represented literally
+- yeah, control characters, too
+
+notes:
+- for consistency's sake, _id is indexed twice
+  - once in data dir
+  - once in indexes dir
+- temporary schemas will be rampant
+  - for talking about joins, for example
+  - may not correspond to a data dir if the data is in memory
+  - should occasionally clean schema dir, probably
+  - all bsql commands operating on stdin care only about the schema file
+    - except update - wtf is it going to update?
+    - feel free to make temporary schema just to use bsql commands
+
+help:
+- filter with awk - set FS,RS,ORS,OFS correctly (space, newline, newline, space)
+- joins with...join - http://stackoverflow.com/questions/22543244/how-to-join-to-files-with-awk-sed-grep-bash-similar-to-sql-join
+- sort with...sort
+
+- getopts: http://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
+
+should have:
+- bsql_tmp_dump - dumps to tmp table
+  - implemented as bsql_create_table and then bsql_update
+- bsql_join - joins two tmp tables
+- bsql_filter - ?
+- bsql_find - all rows in a table, or based on index
+  - also can choose which columns to select
+- bsql_insert - based on arguments
+- bsql_update <table> - operates on stdin, updates all rows piped in based on _id field
+  - passthrough, so you can use it again
+  - yes, that means _id is immutable
+- bsql_update_column - so you don't have to encode things yourself?
+- bsql_column_index <tablename> <columnname>
+
+has:
+- bsql_init - create a fresh db
+- bsql_connect - must be a _function_ (in source_me, probably)
+  - just sets an env variable
+- bsql_create_table - define schema with arguments
+  - @ means auto-incrementing
+  - # means indexed (like with a hash, geddit?)
+  - * means unique
+- bsql_decode
+- bsql_encode
+- bsql_hash

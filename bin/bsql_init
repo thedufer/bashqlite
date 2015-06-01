@@ -1,0 +1,20 @@
+#!/bin/bash
+
+set -e
+
+if [ "$#" -eq 0 ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+  echo "Usage: $0 dbpath"
+  echo "dbpath should not exist, but its parent directory should."
+  exit 0;
+elif [ "$#" -ne 1 ]; then
+  echo "Too many arguments."
+  exit 1;
+fi
+
+mkdir "$1"
+mkdir "$1/data"
+mkdir "$1/indexes"
+mkdir "$1/schemas"
+mkdir "$1/metadata"
+
+exit 0;
