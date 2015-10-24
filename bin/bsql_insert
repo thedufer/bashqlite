@@ -16,21 +16,49 @@ fi
 TABLE=$1
 shift
 
-if [ ! -e $BSQL_PATH/schemas/$TABLE ]; then
+SCHEMA_PATH=$BSQL_PATH/schemas/$TABLE
+
+if [ ! -e $SCHEMA_PATH ]; then
   echo "tablename must be an existing table in the database - could not find $TABLE."
   exit 1
 fi
 
 COLUMNS=""
 
+# Read coolumn names; make sure they exist in the schema
 while [ "$#" -gt 0 ]; do
   COLUMN=$1
   COLUMNS="$COLUMNS $COLUMN"
   shift
-
-  $DIR/bsql_column_index $TABLE $COLUMN
-  if [ "$?" -ne 0 ]; then
+  
+  if ! $DIR/bsql_column_index $TABLE $COLUMN >/dev/null; then
     echo "Column $COLUMN does not exist in table $TABLE"
     exit 1
   fi
 done
+
+# Find autoincrement columns
+AUTOINC_COLUMNS=""
+while read LINE; do
+  COL=`awk '{print $1}' <<<$LINE`
+  if $DIR/../contains "@" <<<"$LINE"; then
+    AUTOINC_COLUMNS="$AUTOINC_COLUMNS $COL"
+  fi
+done <$SCHEMA_PATH
+
+# Make sure autoincrement columns are not being set
+for COL in $AUTOINC_COLUMNS; do
+  if $DIR/../contains "$COL" <<<$COLUMNS; then
+    echo "Can't set autoincrementing column $COL"
+    exit 1
+  fi
+done
+
+CMD="tee"
+i=1
+for COL in $COLUMNS; do
+  CMD="$CMD >(cut -f $i -d \" \")"
+  i=`expr $i + 1`
+done
+
+echo $CMD

@@ -2,6 +2,8 @@
 
 set -e
 
+DIR=`dirname $0`
+
 # LOTS OF ARG PARSING/VALIDATING
 
 if [ "$#" -eq 0 ] || [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
@@ -56,7 +58,7 @@ while [ "$#" -gt 0 ]; do
     echo "Refusing to unique an unindexed column: $ORIG_COLUMN"
     exit 1
   fi
-  if grep -Eq "( |^)$COLUMN( |$)" <<<"$COLUMNS"; then
+  if $DIR/../contains "$COLUMN" <<<"$COLUMNS"; then
     echo "Column names may not be duplicated: $COLUMN"
     exit 1
   fi
